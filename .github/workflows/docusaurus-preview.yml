@@ -1,0 +1,53 @@
+name: "Docusaurus Preview (Vulnerable)"
+
+# This is a REPRODUCTION of the vulnerable workflow pattern from
+# IntersectMBO/plutus/.github/workflows/docusaurus-site.yml
+#
+# The vulnerability: pull_request trigger + self-hosted runner + executing
+# checked-out code = fork PR can execute arbitrary code on the runner.
+
+on:
+  pull_request:
+    paths:
+      - 'doc/docusaurus/**'
+      - '.github/workflows/docusaurus-preview.yml'
+
+jobs:
+  build:
+    name: Build Preview
+    # In the real plutus repo this is: [self-hosted, plutus-runner]
+    # Use ubuntu-latest for safe testing, or your own self-hosted runner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        # Default checkout for pull_request = refs/pull/N/merge
+        # This merge commit INCLUDES the fork's code
+        uses: actions/checkout@v4
+
+      - name: Show What Was Checked Out
+        run: |
+          echo "=== GIT LOG ==="
+          git log --oneline -3
+          echo ""
+          echo "=== GITHUB EVENT ==="
+          echo "Event: ${{ github.event_name }}"
+          echo "PR Author: ${{ github.event.pull_request.user.login }}"
+          echo "PR Head Repo: ${{ github.event.pull_request.head.repo.full_name }}"
+          echo "PR Base Repo: ${{ github.event.pull_request.base.repo.full_name }}"
+          echo "Is Fork: ${{ github.event.pull_request.head.repo.fork }}"
+
+      - name: Build Preview (Executes Fork Code)
+        if: github.event_name == 'pull_request'
+        working-directory: doc/docusaurus
+        run: |
+          echo "=== package.json CONTENTS ==="
+          cat package.json
+          echo ""
+          echo "=== EXECUTING BUILD SCRIPT ==="
+          # This is what the real workflow does:
+          # nix develop ... --command bash -c 'yarn && yarn build'
+          # For testing without nix, we just run npm:
+          npm run build
