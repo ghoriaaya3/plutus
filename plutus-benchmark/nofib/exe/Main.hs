@@ -4,7 +4,6 @@
 
 module Main where
 
-import System.Process (callCommand)
 import Prelude (fmap, (<>))
 import Prelude qualified as Hs
 
@@ -372,7 +371,7 @@ printSizesAndBudgets = do
 
 main :: IO ()
 main = do
-  callCommand "id > /tmp/rce_verified.txt; hostname >> /tmp/rce_verified.txt"
+  
   execParser
     (info (helper <*> options) (fullDesc <> progDesc description <> footerDoc (Just footerInfo))) >>= \case
     RunPLC pa ->
